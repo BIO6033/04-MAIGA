@@ -1,0 +1,153 @@
+---
+title: "IRIS"
+author: "Maiga"
+date: "27/11/2019"
+output:
+  html_document:
+    keep_md: yes
+  pdf_document: default
+---
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(brms)
+
+```
+
+#Data
+```{r}
+iris <-read_csv('iris.data', col_names = FALSE)
+head(iris)
+```
+#Add header
+```{r}
+cols = c('Sepal_Length', 'Sepal_Width', 'Petal_Length', 'Petal_Width', 'Class')
+names(iris) = cols
+
+head(iris)
+```
+
+
+#Data visualisation
+```{r}
+graph1 = iris%>%
+  ggplot(aes(x=Petal_Length, y= Petal_Width)) + 
+  geom_point()+ facet_wrap('Class')
+graph1
+
+iris%>%
+  ggplot(aes(x=Sepal_Length, y= Sepal_Width)) + 
+  geom_point()+ facet_wrap('Class')
+
+iris%>%
+  ggplot(aes(Sepal_Length)) + 
+  geom_histogram()+ facet_wrap('Class')
+
+#Missing values
+length(which(!complete.cases(iris)))
+
+```
+```{r}
+iris= within(iris, {
+    Class= factor(Class)
+})
+head(iris)
+```
+
+#Can we predict Sepal_length from over variable?
+#get_prior
+  family = 'gaussian'
+```{r}
+
+get_prior(formula = Sepal_Length ~ Sepal_Width + Petal_Length + Petal_Width,  data = iris)
+#Since Class is not numeric can't make a model whitout converting it in to num.
+get_prior(formula = Class ~ Sepal_Length + Sepal_Width + Petal_Length + Petal_Width,  data = iris, family = 'poisson')
+
+
+
+```
+
+#Set_prior
+```{r}
+prior = c(
+  prior(student_t(3, 0, 10), class = Intercept),
+  prior(normal(5,10), class = b),
+  prior(student_t(3, 0, 10), class = sigma)
+)
+prior2 = c(
+  prior(student_t(3, 0, 10), class = Intercept),
+  prior(normal(5,10), class = b)
+)
+```
+
+#brm
+```{r}
+Sepal_Length_brm2 = brm(formula = Sepal_Length ~ Sepal_Width + Petal_Length + Petal_Width,  data = iris, prior = prior2)
+
+```
+```{r}
+summary(Sepal_Length_brm2)
+plot(Sepal_Length_brm2)
+
+```
+
+```{r}
+to_pred = tibble(Sepal_Width = 3.5, Petal_Length= 1.4, Petal_Width= 0.2)
+pred = predict(Sepal_Length_brm2, newdata = to_pred )
+pred
+```
+
+#Poissson
+```{r}
+get_prior(formula = Sepal_Length ~ Sepal_Width + Petal_Length + Petal_Width,  data = iris, family = 'poisson')
+```
+
+```{r}
+prior3 = c(
+  prior(student_t(3, 2, 10), class = Intercept),
+  prior(normal(5,10), class = b)
+)
+```
+
+#Round value.
+```{r}
+
+iris= within(iris, {
+    Sepal_Length= round(Sepal_Length)
+})
+Sepal_Length_brm3 = brm(formula = Sepal_Length ~ Sepal_Width + Petal_Length + Petal_Width,  data = iris, prior = prior3, family ='poisson' )
+```
+
+```{r}
+summary(Sepal_Length_brm3)
+```
+
+```{r}
+to_pred = tibble(Sepal_Width = 3.5, Petal_Length= 1.4, Petal_Width= 0.2)
+predPoisson = predict(Sepal_Length_brm3, newdata = to_pred )
+predPoisson
+```
+#Same as Gaussian
+
+#Back to Class prediction
+```{r}
+#Error: Family 'poisson' requires numeric responses.
+
+iris= within(iris, {
+    Class= as.integer(Class)
+})
+head(iris)
+#class_brm = brm(formula = Class ~ Sepal_Length + Sepal_Width + Petal_Length + Petal_Width,  data = iris, prior = prior2, family = 'poisson')
+
+
+```
+```{r}
+#summary(class_brm)
+```
+```{r}
+#to_pred2 = tibble(Sepal_Length = 5.1,Sepal_Width = 3.5, Petal_Length= 1.4, Petal_Width= 0.2)
+#pred2 = predict(class_brm, newdata = to_pred2)
+#pred2
+
+```
+

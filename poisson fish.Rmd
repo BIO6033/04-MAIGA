@@ -1,0 +1,83 @@
+---
+title: "varying_effect"
+author: "Maiga"
+date: "26/11/2019"
+output: html_document
+---
+#Packages
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(brms)
+
+```
+
+
+#Data
+```{r}
+fish <- read.csv("http://stats.idre.ucla.edu/stat/data/fish.csv")
+head(fish)
+```
+
+```{r}
+fish <- within(fish, {
+    nofish <- factor(nofish)
+    livebait <- factor(livebait)
+    camper <- factor(camper)
+})
+head(fish)
+
+```
+
+#Missing values
+```{r}
+length(which(!complete.cases(fish)))
+
+```
+
+#Visualization
+```{r}
+fish%>%
+ ggplot(aes(x=-persons, y=count)) + geom_point()
+  #facet_wrap('child', scales = "free", ncol = 2)
+
+fish%>%
+  summarise(mean(count),var(count))
+
+```
+#Poisson
+```{r}
+#VarExp = fish%>% select(1:4)
+VarExp = fish[1:4]
+head(VarExp)
+```
+
+
+```{r}
+countGLM = glm(formula = count ~  child + persons, family = 'poisson', data = fish)
+
+summary(countGLM)
+
+```
+
+#get prior
+```{r}
+get_prior(formula = count ~  child + persons, family = poisson(), data = fish)
+mean(fish$person)
+sd(fish$person)
+mean(fish$child)
+sd(fish$child)
+set_prio
+```
+
+
+#set_prior
+```{r}
+prior = c(
+  set_prior(student_(3, -2, 10), class = Intercept),
+  set_prior("cauchy(0, 1)", class = "sd"),
+  set_prior(normal(2.5,1), class = b, coef= persons),
+  set_prior(normal(0.6,0.8), class = b, coef = child)
+  )
+```
+
